@@ -1,3 +1,3 @@
 # bash commands for installing your package
-BUILD_NUM=1
-conda install -c pslmodels -c conda-forge taxbrain "paramtools>=0.5.4"
+conda install -c conda-forge "paramtools>=0.5.4"
+pip install "git+https://github.com/hdoupe/Tax-Brain.git@tmp-install"
