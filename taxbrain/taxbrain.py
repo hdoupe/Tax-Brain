@@ -24,7 +24,8 @@ class TaxBrain:
 
     def __init__(self, start_year, end_year=LAST_BUDGET_YEAR,
                  microdata=None, use_cps=False, reform=None,
-                 behavior=None, assump=None, verbose=False):
+                 behavior=None, assump=None, verbose=False,
+                 num_workers=None):
         """
         Constructor for the TaxBrain class
         Parameters
@@ -39,7 +40,7 @@ class TaxBrain:
                  be run using the CPS file included in Tax-Calculator.
                  Note: use_cps cannot be True if a file was also specified with
                  the microdata parameter.
-        reform: Individual income tax policy reform. Can be either a string
+        reform: Individual income tax policy reform. Can conabe either a string
                 pointing to a JSON reform file, or the contents of a JSON file.
         behavior: Individual behavior assumptions use by the Behavior-Response
                   package.
@@ -71,6 +72,7 @@ class TaxBrain:
         self.base_data = {yr: {} for yr in range(start_year, end_year + 1)}
         self.reform_data = {yr: {} for yr in range(start_year, end_year + 1)}
         self.verbose = verbose
+        self.num_workers = num_workers
 
         # Process user inputs early to throw any errors quickly
         self.params = self._process_user_mods(reform, assump)
@@ -275,7 +277,7 @@ class TaxBrain:
             # run calculations in parallel
             delay = [delayed(self.base_calc.calc_all()),
                      delayed(self.reform_calc.calc_all())]
-            compute(*delay)
+            compute(*delay, scheduler="processes", num_workers=self.num_workers)
             self.base_data[yr] = self.base_calc.dataframe(varlist)
             self.reform_data[yr] = self.reform_calc.dataframe(varlist)
 
@@ -290,7 +292,7 @@ class TaxBrain:
                                                     self.params["behavior"],
                                                     year, varlist)
             delay_list.append(delay)
-        compute(*delay_list)
+        compute(*delay_list, scheduler="processes", num_workers=self.num_workers)
         del delay_list
 
     def _run_dynamic_calc(self, calc1, calc2, behavior, year, varlist):
