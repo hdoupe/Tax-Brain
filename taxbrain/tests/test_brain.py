@@ -87,8 +87,8 @@ def test_user_input(reform_json_str, assump_json_str):
         }
     }
     # Test valid reform dictionary with No assumption
-    TaxBrain(2018, 2020, use_cps=True, reform=valid_reform)
-    TaxBrain(2018, 2020, use_cps=True, reform=reform_json_str)
+    TaxBrain(2018, 2020, use_cps=True, reform=valid_reform, num_workers=1)
+    TaxBrain(2018, 2020, use_cps=True, reform=reform_json_str, num_workers=1)
     invalid_assump = {
         "consumption": {}
     }
@@ -98,16 +98,16 @@ def test_user_input(reform_json_str, assump_json_str):
         "growdiff_baseline": {},
         "growdiff_response": {}
     }
-    TaxBrain(2018, 2019, use_cps=True, assump=valid_assump)
+    TaxBrain(2018, 2019, use_cps=True, assump=valid_assump, num_workers=1)
     TaxBrain(2018, 2019, use_cps=True, reform=reform_json_str,
-             assump=assump_json_str)
+             assump=assump_json_str, num_workers=1)
     tb = TaxBrain(2018, 2019, use_cps=True, reform=valid_reform,
                   assump=valid_assump)
     required_param_keys = {"policy", "consumption", "growdiff_baseline",
                            "growdiff_response", "behavior"}
     assert set(tb.params.keys()) == required_param_keys
     with pytest.raises(ValueError):
-        TaxBrain(2018, 2020, use_cps=True, assump=invalid_assump)
+        TaxBrain(2018, 2020, use_cps=True, assump=invalid_assump, num_workers=1)
     invalid_assump = {
         "consumption": {},
         "growdiff_baseline": {},
@@ -115,8 +115,8 @@ def test_user_input(reform_json_str, assump_json_str):
         "invalid": {}
     }
     with pytest.raises(ValueError):
-        TaxBrain(2018, 2020, use_cps=True, assump=invalid_assump)
+        TaxBrain(2018, 2020, use_cps=True, assump=invalid_assump, num_workers=1)
     with pytest.raises(TypeError):
-        TaxBrain(2018, 2020, use_cps=True, reform=True)
+        TaxBrain(2018, 2020, use_cps=True, reform=True, num_workers=1)
     with pytest.raises(TypeError):
-        TaxBrain(2018, 2020, use_cps=True, assump=True)
+        TaxBrain(2018, 2020, use_cps=True, assump=True, num_workers=1)
