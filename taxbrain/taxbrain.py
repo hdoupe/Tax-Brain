@@ -3,6 +3,7 @@ import pandas as pd
 import behresp
 from taxcalc.utils import (DIST_VARIABLES, DIFF_VARIABLES,
                            create_distribution_table, create_difference_table)
+import dask.multiprocessing
 from dask import compute, delayed
 from collections import defaultdict
 from taxbrain.utils import weighted_sum
@@ -259,7 +260,7 @@ class TaxBrain:
             # run calculations in parallel
             delay = [delayed(base_calc.calc_all()),
                      delayed(reform_calc.calc_all())]
-            compute(*delay)
+            compute(*delay, scheduler=dask.multiprocessing.get)
             self.base_data[yr] = base_calc.dataframe(varlist)
             self.reform_data[yr] = reform_calc.dataframe(varlist)
 
