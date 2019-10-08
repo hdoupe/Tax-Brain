@@ -10,6 +10,8 @@ from .helpers import (convert_defaults, convert_adj, TCDIR,
                       convert_behavior_adj)
 from .outputs import create_layout, aggregate_plot
 from taxbrain import TaxBrain
+import dask.multiprocessing
+from distributed import Client, LocalCluster
 from dask import delayed, compute
 from collections import defaultdict
 from marshmallow import fields
@@ -158,19 +160,27 @@ def run_model(meta_params_dict, adjustment):
                                     random_state=sampling_seed)
         end_year = start_year
 
+    scheduler_address = os.environ.get("DASK_SCHEDULER")
+    if scheduler_address:
+        client = Client(scheduler_address, direct_to_workers=True)
+    else:
+        client = Client(
+            LocalCluster(n_workers=2, threads_per_worker=2),
+            direct_to_workers=True
+        )
+    print("got client", client)
     tb = TaxBrain(start_year, end_year, microdata=sample,
                   use_cps=use_cps,
                   reform=policy_mods,
                   behavior=behavior_mods)
+    print("running...")
+
     tb.run()
 
     # Collect results for each year
-    delayed_list = []
+    results = []
     for year in range(start_year, end_year + 1):
-        print('delaying for', year)
-        delay = delayed(nth_year_results)(tb, year, user_mods, fuzz)
-        delayed_list.append(delay)
-    results = compute(*delayed_list)
+        results.append(nth_year_results(tb, year, user_mods, fuzz))
 
     # process results to get them ready for display
     # create aggregate plot

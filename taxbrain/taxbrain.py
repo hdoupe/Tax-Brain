@@ -5,6 +5,7 @@ from taxcalc.utils import (DIST_VARIABLES, DIFF_VARIABLES,
                            create_distribution_table, create_difference_table)
 import dask.multiprocessing
 from dask import compute, delayed
+from distributed import Client
 from collections import defaultdict
 from taxbrain.utils import weighted_sum
 from typing import Union
@@ -27,7 +28,7 @@ class TaxBrain:
                  microdata: Union[str, dict] = None, use_cps: bool = False,
                  reform: Union[str, dict] = None, behavior: dict = None,
                  assump=None, base_policy: Union[str, dict] = None,
-                 verbose=False):
+                 verbose=False, client=None):
         """
         Constructor for the TaxBrain class
         Parameters
@@ -91,6 +92,7 @@ class TaxBrain:
         self.params["base_policy"] = base_policy
 
         self.has_run = False
+        self.client = client or Client()
 
     def run(self, varlist: list = DEFAULT_VARIABLES):
         """
@@ -254,15 +256,28 @@ class TaxBrain:
         if "s006" not in varlist:  # ensure weight is always included
             varlist.append("s006")
 
+        def advance_and_run(base, reform, year):
+            base.advance_to_year(year)
+            base.calc_all()
+            reform.advance_to_year(year)
+            reform.calc_all()
+            return (base, reform)
+
+        lazy_year_vals = []
         for yr in range(self.start_year, self.end_year + 1):
-            base_calc.advance_to_year(yr)
-            reform_calc.advance_to_year(yr)
             # run calculations in parallel
-            delay = [delayed(base_calc.calc_all()),
-                     delayed(reform_calc.calc_all())]
-            compute(*delay, scheduler=dask.multiprocessing.get)
-            self.base_data[yr] = base_calc.dataframe(varlist)
-            self.reform_data[yr] = reform_calc.dataframe(varlist)
+            print("delaying", yr)
+            lazy_year_vals.append(
+                delayed(advance_and_run)(base_calc, reform_calc, yr),
+            )
+
+        print("starting computation")
+        futures = self.client.compute(delayed, scheduler=dask.multiprocessing.get)
+        print("gathering futures")
+        results = self.client.gather(futures)
+        for result in results:
+            self.base_data[yr] = result[0].dataframe(varlist)
+            self.reform_data[yr] = result[1].dataframe(varlist)
 
     def _dynamic_run(self, varlist, base_calc, reform_calc):
         """
