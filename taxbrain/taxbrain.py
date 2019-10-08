@@ -3,7 +3,7 @@ import pandas as pd
 import behresp
 from taxcalc.utils import (DIST_VARIABLES, DIFF_VARIABLES,
                            create_distribution_table, create_difference_table)
-import dask.multiprocessing
+import dask
 from dask import compute, delayed
 from distributed import Client
 from collections import defaultdict
@@ -272,7 +272,7 @@ class TaxBrain:
             )
 
         print("starting computation")
-        futures = self.client.compute(delayed, scheduler=dask.multiprocessing.get)
+        futures = self.client.compute(lazy_year_vals, scheduler=dask.multiprocessing.get)
         print("gathering futures")
         results = self.client.gather(futures)
         for result in results:
