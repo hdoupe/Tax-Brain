@@ -256,28 +256,16 @@ class TaxBrain:
         if "s006" not in varlist:  # ensure weight is always included
             varlist.append("s006")
 
-        def advance_and_run(base, reform, year):
-            base.advance_to_year(year)
-            base.calc_all()
-            reform.advance_to_year(year)
-            reform.calc_all()
-            return (base, reform)
-
-        lazy_year_vals = []
         for yr in range(self.start_year, self.end_year + 1):
+            base_calc.advance_to_year(yr)
+            reform_calc.advance_to_year(yr)
             # run calculations in parallel
-            print("delaying", yr)
-            lazy_year_vals.append(
-                delayed(advance_and_run)(base_calc, reform_calc, yr),
-            )
-
-        print("starting computation")
-        futures = self.client.compute(lazy_year_vals, scheduler=dask.multiprocessing.get)
-        print("gathering futures")
-        results = self.client.gather(futures)
-        for result in results:
-            self.base_data[yr] = result[0].dataframe(varlist)
-            self.reform_data[yr] = result[1].dataframe(varlist)
+            delay = [delayed(base_calc.calc_all()),
+                        delayed(reform_calc.calc_all())]
+            futures = self.client.compute(delay, scheduler=dask.threaded.get)
+            self.client.gather(futures)
+            self.base_data[yr] = base_calc.dataframe(varlist)
+            self.reform_data[yr] = reform_calc.dataframe(varlist)
 
     def _dynamic_run(self, varlist, base_calc, reform_calc):
         """

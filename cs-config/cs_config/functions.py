@@ -176,7 +176,7 @@ def run_model(meta_params_dict, adjustment):
     print("running...")
 
     tb.run()
-
+    client.close()
     # Collect results for each year
     results = []
     for year in range(start_year, end_year + 1):
