@@ -160,19 +160,13 @@ def run_model(meta_params_dict, adjustment):
                                     random_state=sampling_seed)
         end_year = start_year
 
-    scheduler_address = os.environ.get("DASK_SCHEDULER")
-    if scheduler_address:
-        client = Client(scheduler_address, direct_to_workers=True)
-    else:
-        client = Client(
-            LocalCluster(n_workers=2, threads_per_worker=2),
-            direct_to_workers=True
-        )
+    client = Client(direct_to_workers=True)
     print("got client", client)
     tb = TaxBrain(start_year, end_year, microdata=sample,
                   use_cps=use_cps,
                   reform=policy_mods,
-                  behavior=behavior_mods)
+                  behavior=behavior_mods,
+                  client=client)
     print("running...")
 
     tb.run()
