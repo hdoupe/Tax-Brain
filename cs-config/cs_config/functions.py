@@ -164,11 +164,12 @@ def run_model(meta_params_dict, adjustment):
         sample = full_sample.sample(frac=sampling_frac,
                                     random_state=sampling_seed)
         end_year = start_year
-
+    print("behavior_mods", behavior_mods)
     tb = TaxBrain(start_year, end_year, microdata=sample,
                   use_cps=use_cps,
                   reform=policy_mods,
-                  behavior=behavior_mods)
+                  behavior=behavior_mods,
+                  verbose=True)
     tb.run()
 
     # Collect results for each year

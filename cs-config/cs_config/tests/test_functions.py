@@ -17,10 +17,11 @@ OK_ADJUSTMENT = {
         ],
         "EITC_c": [{"EIC": "0kids", "year": 2019, "value": 1000.0}],
     },
+    # uncomment "inc" parameter to use behresp
     "behavior": {
-        "inc": [
-            {"value": -0.1}
-        ]
+        # "inc": [
+        #     {"value": -0.1}
+        # ]
     }
 }
 
