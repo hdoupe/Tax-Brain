@@ -10,6 +10,7 @@ from .helpers import (convert_defaults, convert_adj, TCDIR,
                       convert_behavior_adj)
 from .outputs import create_layout, aggregate_plot
 from taxbrain import TaxBrain
+from distributed import Client
 from dask import delayed, compute
 from collections import defaultdict
 from marshmallow import fields
@@ -169,15 +170,24 @@ def run_model(meta_params_dict, adjustment):
                   use_cps=use_cps,
                   reform=policy_mods,
                   behavior=behavior_mods)
-    tb.run()
+    tb.run(cs_run=True)
 
     # Collect results for each year
-    delayed_list = []
+    # futures = []
+    # with Client() as c:
+    #     for year in range(start_year, end_year + 1):
+    #         print('delaying for', year)
+    #         futures.append(
+    #             c.submit(nth_year_results, tb, year, user_mods, fuzz)
+    #         )
+
+    #     print("got futures", futures)
+    #     results = c.gather(futures)
+
+    results = []
     for year in range(start_year, end_year + 1):
-        print('delaying for', year)
-        delay = delayed(nth_year_results)(tb, year, user_mods, fuzz)
-        delayed_list.append(delay)
-    results = compute(*delayed_list)
+        print('making table for', year)
+        results.append(nth_year_results(tb, year, user_mods, fuzz))
 
     # process results to get them ready for display
     # create aggregate plot

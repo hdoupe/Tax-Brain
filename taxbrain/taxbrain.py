@@ -3,9 +3,10 @@ import pandas as pd
 import behresp
 from taxcalc.utils import (DIST_VARIABLES, DIFF_VARIABLES,
                            create_distribution_table, create_difference_table)
+from distributed import Client
 from dask import compute, delayed
 from collections import defaultdict
-from taxbrain.utils import weighted_sum
+from taxbrain.utils import weighted_sum, make_calculators, run, static_run, dynamic_run
 from typing import Union
 
 
@@ -113,18 +114,31 @@ class TaxBrain:
             raise TypeError(msg)
         if "s006" not in varlist:
             varlist.append("s006")
+        calc_args = {
+            "params": self.params,
+            "microdata": self.microdata,
+            "use_cps": self.use_cps,
+            "verbose": self.verbose,
+        }
         if cs_run:
             if self.params["behavior"]:
-                run_func = self._cs_dynamic_run
+                run_func = dynamic_run
             else:
-                run_func = self._cs_static_run
-            delay = [
-                delayed(self._cs_run(varlist, run_func, year))
-                for year in range(self.start_year, self.end_year + 1)
-            ]
-            compute(*delay)
+                run_func = static_run
+            with Client() as c:
+                print("submitting")
+                futures = [
+                    c.submit(run, varlist, run_func, year, calc_args)
+                    for year in range(self.start_year, self.end_year + 1)
+                ]
+                print("in tb", futures)
+                results = c.gather(futures)
+                list(map(c.cancel, futures))
+                for year, base, reform in results:
+                    self.base_data[year] = base
+                    self.reform_data[year] = reform
         else:
-            base_calc, reform_calc = self._make_calculators()
+            base_calc, reform_calc = make_calculators
             if self.params["behavior"]:
                 if self.verbose:
                     print("Running dynamic simulations")
@@ -264,40 +278,6 @@ class TaxBrain:
         return table
 
     # ----- private methods -----
-    def _cs_run(self, varlist, run_func, year):
-        """
-        Function for improving the memory usage of TaxBrain on Compute Studio
-        Parameters
-        ----------
-        varlist: Variables from Tax-Calculator that will be saved
-        year: year the calculator needs to run
-        """
-        base_calc, reform_calc = self._make_calculators()
-        base_calc.advance_to_year(year)
-        reform_calc.advance_to_year(year)
-        run_func(varlist, base_calc, reform_calc, year)
-        del base_calc, reform_calc
-
-    def _cs_static_run(self, varlist, base_calc, reform_calc, year):
-        """
-        Function for running a static simulation on the Compute Studio servers
-        """
-        delay = [delayed(base_calc.calc_all()),
-                 delayed(reform_calc.calc_all())]
-        compute(*delay)
-        self.base_data[year] = base_calc.dataframe(varlist)
-        self.reform_data[year] = reform_calc.dataframe(varlist)
-
-    def _cs_dynamic_run(self, varlist, base_calc, reform_calc, year):
-        """
-        Function for runnnig a dynamic simulation on the Compute Studio servers
-        """
-        base, reform = behresp.response(base_calc, reform_calc,
-                                        self.params["behavior"],
-                                        dump=True)
-        self.base_data[year] = base[varlist]
-        self.reform_data[year] = reform[varlist]
-        del base, reform
 
     def _static_run(self, varlist, base_calc, reform_calc):
         """
@@ -388,51 +368,3 @@ class TaxBrain:
         assert set(params.keys()) == required_keys
 
         return params
-
-    def _make_calculators(self):
-        """
-        This function creates the baseline and reform calculators used when
-        the `run()` method is called
-        """
-        # Create two microsimulation calculators
-        gd_base = tc.GrowDiff()
-        gf_base = tc.GrowFactors()
-        # apply user specified growdiff
-        if self.params["growdiff_baseline"]:
-            gd_base.update_growdiff(self.params["growdiff_baseline"])
-            gd_base.apply_to(gf_base)
-        # Baseline calculator
-        if self.use_cps:
-            records = tc.Records.cps_constructor(data=self.microdata,
-                                                 gfactors=gf_base)
-        else:
-            records = tc.Records(self.microdata, gfactors=gf_base)
-        policy = tc.Policy(gf_base)
-        if self.params["base_policy"]:
-            policy.implement_reform(self.params["base_policy"])
-        base_calc = tc.Calculator(policy=policy,
-                                  records=records,
-                                  verbose=self.verbose)
-
-        # Reform calculator
-        # Initialize a policy object
-        gd_reform = tc.GrowDiff()
-        gf_reform = tc.GrowFactors()
-        if self.params["growdiff_response"]:
-            gd_reform.update_growdiff(self.params["growdiff_response"])
-            gd_reform.apply_to(gf_reform)
-        if self.use_cps:
-            records = tc.Records.cps_constructor(data=self.microdata,
-                                                 gfactors=gf_reform)
-        else:
-            records = tc.Records(self.microdata, gfactors=gf_reform)
-        policy = tc.Policy(gf_reform)
-        if self.params["base_policy"]:
-            policy.implement_reform(self.params["base_policy"])
-        policy.implement_reform(self.params['policy'])
-        # Initialize Calculator
-        reform_calc = tc.Calculator(policy=policy, records=records,
-                                    verbose=self.verbose)
-        # delete all unneeded variables
-        del gd_base, gd_reform, records, gf_base, gf_reform, policy
-        return base_calc, reform_calc

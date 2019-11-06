@@ -8,6 +8,100 @@ from bokeh.models import ColumnDataSource, NumeralTickFormatter
 from bokeh.palettes import GnBu5
 from collections import defaultdict
 
+import taxcalc as tc
+import behresp
+
+
+def make_calculators(params, microdata, use_cps, verbose):
+    """
+    This function creates the baseline and reform calculators used when
+    the `run()` method is called
+    """
+    # Create two microsimulation calculators
+    gd_base = tc.GrowDiff()
+    gf_base = tc.GrowFactors()
+    # apply user specified growdiff
+    if params["growdiff_baseline"]:
+        gd_base.update_growdiff(params["growdiff_baseline"])
+        gd_base.apply_to(gf_base)
+    # Baseline calculator
+    if use_cps:
+        records = tc.Records.cps_constructor(data=microdata,
+                                                gfactors=gf_base)
+    else:
+        records = tc.Records(microdata, gfactors=gf_base)
+    policy = tc.Policy(gf_base)
+    if params["base_policy"]:
+        policy.implement_reform(params["base_policy"])
+    base_calc = tc.Calculator(policy=policy,
+                                records=records,
+                                verbose=verbose)
+
+    # Reform calculator
+    # Initialize a policy object
+    gd_reform = tc.GrowDiff()
+    gf_reform = tc.GrowFactors()
+    if params["growdiff_response"]:
+        gd_reform.update_growdiff(params["growdiff_response"])
+        gd_reform.apply_to(gf_reform)
+    if use_cps:
+        records = tc.Records.cps_constructor(data=microdata,
+                                                gfactors=gf_reform)
+    else:
+        records = tc.Records(microdata, gfactors=gf_reform)
+    policy = tc.Policy(gf_reform)
+    if params["base_policy"]:
+        policy.implement_reform(params["base_policy"])
+    policy.implement_reform(params['policy'])
+    # Initialize Calculator
+    reform_calc = tc.Calculator(policy=policy, records=records,
+                                verbose=verbose)
+    # delete all unneeded variables
+    del gd_base, gd_reform, records, gf_base, gf_reform, policy
+    return base_calc, reform_calc
+
+
+def run(varlist, run_func, year, calc_args):
+    """
+    Function for improving the memory usage of TaxBrain on Compute Studio
+    Parameters
+    ----------
+    varlist: Variables from Tax-Calculator that will be saved
+    year: year the calculator needs to run
+    """
+    base_calc, reform_calc = make_calculators(**calc_args)
+    base_calc.advance_to_year(year)
+    reform_calc.advance_to_year(year)
+    return run_func(varlist, base_calc, reform_calc, year, params=calc_args["params"])
+
+
+def static_run(varlist, base_calc, reform_calc, year, params):
+    """
+    Function for running a static simulation on the Compute Studio servers
+    """
+    # delay = [delayed(base_calc.calc_all()),
+    #          delayed(reform_calc.calc_all())]
+    # compute(*delay)
+    base_calc.calc_all()
+    reform_calc.calc_all()
+    return year, base_calc.dataframe(varlist), reform_calc.dataframe(varlist)
+    # self.base_data[year] = base_calc.dataframe(varlist)
+    # self.reform_data[year] = reform_calc.dataframe(varlist)
+
+
+def dynamic_run(varlist, base_calc, reform_calc, year, params):
+    """
+    Function for runnnig a dynamic simulation on the Compute Studio servers
+    """
+
+    base, reform = behresp.response(base_calc, reform_calc,
+                                    params["behavior"],
+                                    dump=True)
+    # self.base_data[year] = base[varlist]
+    # self.reform_data[year] = reform[varlist]
+    # del base, reform
+    return year, base[varlist], reform[varlist]
+
 
 def weighted_sum(df, var, wt="s006"):
     """
