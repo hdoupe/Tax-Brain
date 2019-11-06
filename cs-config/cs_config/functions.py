@@ -4,6 +4,7 @@ import json
 import traceback
 import paramtools
 import pandas as pd
+import time
 from .constants import MetaParameters
 from .helpers import (convert_defaults, convert_adj, TCDIR,
                       postprocess, nth_year_results, retrieve_puf,
@@ -170,7 +171,10 @@ def run_model(meta_params_dict, adjustment):
                   reform=policy_mods,
                   behavior=behavior_mods,
                   verbose=True)
+    s = time.time()
     tb.run()
+    f = time.time()
+    print(f"tb.run() took {f-s}s")
 
     # Collect results for each year
     delayed_list = []
