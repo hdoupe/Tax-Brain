@@ -1,7 +1,12 @@
 import behresp
 import taxbrain
 import taxcalc as tc
-import cairocffi as cairo
+try:
+    import cairocffi as cairo
+except ImportError:
+    import warnings
+    warnings.warn("Cairo is not installed.")
+    cairo = None
 from pathlib import Path
 from bokeh.io import export_png, export_svgs
 from .report_utils import (form_intro, form_baseline_intro, write_text, date,
