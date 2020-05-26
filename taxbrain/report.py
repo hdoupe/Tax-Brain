@@ -5,7 +5,7 @@ try:
     import cairocffi as cairo
 except ImportError:
     import warnings
-    warnings.warn("Cairo is not installed.")
+    warnings.warn("The cairo package must be installed to create reports.")
     cairo = None
 from pathlib import Path
 from bokeh.io import export_png, export_svgs

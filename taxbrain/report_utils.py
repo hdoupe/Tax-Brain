@@ -3,17 +3,31 @@ Helper Functions for creating the automated reports
 """
 import re
 import json
-import weasyprint
-import markdown
 import pypandoc
 import numpy as np
 import pandas as pd
 import taxcalc as tc
-from jinja2 import Template
 from pathlib import Path
 from datetime import datetime
-from tabulate import tabulate
 from collections import defaultdict, deque
+
+try:
+    import weasyprint
+    import markdown
+    import jinja2
+    from tabulate import tabulations
+except ImportError:
+    import warnings
+    warnings.warn(
+        "The weasyprint, markdown, jinja2, and tabulations packages must be "
+        "installed to create reports."
+    )
+
+    weasyprint = None
+    markdown = None
+    jinja2 = None
+    tabulations = None
+
 
 
 CUR_PATH = Path(__file__).resolve().parent
