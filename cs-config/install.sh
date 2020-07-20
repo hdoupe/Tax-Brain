@@ -16,6 +16,6 @@ conda install -c conda-forge pytest \
  firefox
 
 
-git clone --branch addreports https://github.com/andersonfrailey/Tax-Brain
+git clone --branch addreports https://github.com/hdoupe/Tax-Brain
 cd Tax-Brain
 pip install -e .
