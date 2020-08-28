@@ -1,4 +1,6 @@
 import shutil
+from contextlib import contextmanager
+
 import behresp
 import taxbrain
 import taxcalc as tc
@@ -14,6 +16,24 @@ from .report_utils import (form_intro, form_baseline_intro, write_text, date,
 
 
 CUR_PATH = Path(__file__).resolve().parent
+
+@contextmanager
+def get_webdriver():
+    """
+    Make google webdriver.
+    h/t: https://github.com/bokeh/bokeh/issues/8176#issuecomment-420475548
+    """
+    from selenium.webdriver import Chrome, ChromeOptions
+    options = ChromeOptions()
+    options.add_argument('--headless')
+    options.add_argument("--window-size=2000x2000")
+    metrics = { "deviceMetrics": { "pixelRatio": 1.0 } }
+    options.add_argument("--no-sandbox")
+    options.add_experimental_option("mobileEmulation", metrics)
+    web_driver = Chrome(chrome_options=options)
+    yield web_driver
+    web_driver.quit()
+
 
 
 def report(tb, name=None, change_threshold=0.05, description=None,
@@ -56,7 +76,10 @@ def report(tb, name=None, change_threshold=0.05, description=None,
         # do not render correctly in the PDF document
         filename = f"{graph}_graph.png"
         full_filename = Path(output_path, filename)
-        export_png(plot, filename=str(full_filename))
+        with get_webdriver() as webdriver:
+            export_png(
+                plot, filename=str(full_filename), webdriver=webdriver
+            )
 
         return str(full_filename)
 
