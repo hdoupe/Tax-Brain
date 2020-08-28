@@ -1,5 +1,5 @@
 # bash commands for installing your package
-conda install -c pslmodels -c conda-forge nodejs "taxcalc>=2.5.0" "behresp" "paramtools>=0.10.2" bokeh pypandoc
+conda install -c pslmodels -c conda-forge nodejs "taxcalc<3.0.0" "behresp" "paramtools>=0.10.2" bokeh pypandoc
 
 conda install -c conda-forge pytest \
  dask \
