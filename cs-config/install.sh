@@ -17,7 +17,7 @@ conda install -c conda-forge "pandas==1.0.1" \
  #firefox
 
 
-git clone --branch addreports https://github.com/hdoupe/Tax-Brain
+git clone --branch addreports-hdoupe https://github.com/hdoupe/Tax-Brain
 cd Tax-Brain
 pip install -e .
 
