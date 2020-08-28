@@ -12,9 +12,9 @@ conda install -c conda-forge "pandas==1.0.1" \
  selenium \
  pypandoc \
  nodejs \
- pip \
- geckodriver \
- firefox
+ pip 
+ #geckodriver \
+ #firefox
 
 
 git clone --branch addreports https://github.com/hdoupe/Tax-Brain
