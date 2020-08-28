@@ -38,8 +38,8 @@ apt-get update \
 
 # Install google chrome:
 wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
-  && apt install ./google-chrome-stable_current_amd64.deb
-  && rm google-chrome-stable_current_amd64.deb
+  && apt install ./google-chrome-stable_current_amd64.deb \
+  && rm google-chrome-stable_current_amd64.deb \
   && chmod u+x /usr/bin/google-chrome
 
 # Install unzip to unzip chromedriver.
