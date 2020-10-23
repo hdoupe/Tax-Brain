@@ -12,6 +12,8 @@ except ImportError:
     boto3 = None
 import gzip
 import copy
+from pathlib import Path
+
 import pandas as pd
 import numpy as np
 from collections import defaultdict
@@ -30,6 +32,13 @@ from .tables import (summary_aggregate, summary_diff_xbin, summary_diff_xdec,
 
 TCPATH = inspect.getfile(Policy)
 TCDIR = os.path.dirname(TCPATH)
+
+import fsspec
+from pathlib import Path
+
+
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID", "")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
 
 
 def random_seed(user_mods, year):
@@ -333,20 +342,16 @@ def pdf_to_clean_html(pdf):
             .replace('class="dataframe"', ''))
 
 
-def retrieve_puf(aws_access_key_id, aws_secret_access_key):
+def retrieve_puf():
     """
-    Function for retrieving the PUF from the OSPC S3 bucket
+    Retrieves PUF from AWS if available. Otherwise tries to read it
+    from a local file.
     """
-    has_credentials = aws_access_key_id and aws_secret_access_key
-    if has_credentials and boto3 is not None:
-        client = boto3.client(
-            "s3",
-            aws_access_key_id=aws_access_key_id,
-            aws_secret_access_key=aws_secret_access_key,
-        )
-        obj = client.get_object(Bucket="ospc-data-files", Key="puf.csv.gz")
-        gz = gzip.GzipFile(fileobj=obj["Body"])
-        puf_df = pd.read_csv(gz)
-        return puf_df
+    if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY:
+        return pd.read_csv("s3://ospc-data-files/puf.csv.gz")
+    elif Path("puf.csv.gz").exists():
+        return pd.read_csv("puf.csv.gz")
+    elif Path("puf.csv").exists():
+        return pd.read_csv("puf.csv")
     else:
         return None
