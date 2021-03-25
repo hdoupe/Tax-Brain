@@ -1,4 +1,4 @@
 # bash commands for installing your package
-conda install -c pslmodels -c conda-forge "taxbrain>=2.4.0"
+conda install -c conda-forge behresp
 pip install cs2tc
 apt-get install texlive -y
